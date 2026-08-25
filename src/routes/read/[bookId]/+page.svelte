@@ -5,6 +5,7 @@
 	import { db, type Book } from '$lib/storage/db';
 	import { loadBookFile } from '$lib/storage/opfs';
 	import { attachSelectionController, type SelectionInfo } from '$lib/selection/controller';
+	import { attachPageTurnController } from '$lib/reader/pageTurn';
 	import SelectionPopup from '$lib/components/SelectionPopup.svelte';
 	import { defaultReaderStyle, buildReaderCSS, readerPalettes, type ReaderStyle, type ReaderTheme } from '$lib/epub/theme';
 	import type { FoliateView, FoliateRelocateDetail, FoliateTocItem } from '$lib/epub/types';
@@ -15,6 +16,7 @@
 	let container = $state<HTMLDivElement>();
 	let view: FoliateView | null = null;
 	let detachSelection: (() => void) | null = null;
+	let detachPageTurn: (() => void) | null = null;
 	let selection = $state<SelectionInfo | null>(null);
 	let progressFraction = $state(0);
 	let toc = $state<FoliateTocItem[]>([]);
@@ -72,6 +74,11 @@
 			onClear: () => (selection = null)
 		});
 
+		detachPageTurn = attachPageTurnController(el, {
+			onPrev: () => view?.prev(),
+			onNext: () => view?.next()
+		});
+
 		await el.init({ lastLocation: b.lastCfi ?? undefined, showTextStart: !b.lastCfi });
 		await db.books.update(b.id, { lastOpenedAt: Date.now() });
 	}
@@ -124,6 +131,7 @@
 
 	onDestroy(() => {
 		detachSelection?.();
+		detachPageTurn?.();
 		if (saveTimer) clearTimeout(saveTimer);
 		flushProgress();
 	});
@@ -181,7 +189,12 @@
 		<p class="status error">{loadError}</p>
 	{/if}
 
-	<div class="reader-surface" style="background:{readerPalettes[readerStyle.theme].bg}" bind:this={container}></div>
+	<div class="reader-surface" style="background:{readerPalettes[readerStyle.theme].bg}" bind:this={container}>
+		{#if book}
+			<button class="page-nav prev" onclick={() => view?.prev()} aria-label="Previous page">‹</button>
+			<button class="page-nav next" onclick={() => view?.next()} aria-label="Next page">›</button>
+		{/if}
+	</div>
 
 	<SelectionPopup {selection} bookId={book?.id ?? ''} bookTitle={book?.title ?? ''} />
 </div>
@@ -299,6 +312,7 @@
 		color: var(--danger);
 	}
 	.reader-surface {
+		position: relative;
 		flex: 1;
 		min-height: 0;
 	}
@@ -306,5 +320,35 @@
 		display: block;
 		width: 100%;
 		height: 100%;
+	}
+	.page-nav {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		z-index: 30;
+		width: 2.6rem;
+		height: 2.6rem;
+		border-radius: 50%;
+		border: 1px solid var(--line);
+		background: var(--surface);
+		color: var(--ink-soft);
+		font-size: 1.4rem;
+		line-height: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		opacity: 0.35;
+		transition: opacity 0.15s ease;
+	}
+	.page-nav:hover,
+	.page-nav:focus-visible {
+		opacity: 1;
+	}
+	.page-nav.prev {
+		left: 0.5rem;
+	}
+	.page-nav.next {
+		right: 0.5rem;
 	}
 </style>
