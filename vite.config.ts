@@ -10,9 +10,11 @@ export default defineConfig({
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
 				runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter({ fallback: '404.html' })
-			// When a GitHub repo/Pages target is picked, set `paths: { base: '/<repo-name>' }`
-			// here (SvelteKit owns `base`, not Vite's own `base` option — it overrides it).
+			adapter: adapter({ fallback: '404.html' }),
+			// SvelteKit owns `base`, not Vite's own `base` option — it overrides it.
+			// GitHub Pages serves project sites from https://<user>.github.io/<repo>/,
+			// not the domain root, so every route/asset URL needs this prefix.
+			paths: { base: '/spanish-book' }
 		}),
 		SvelteKitPWA({
 			kit: { adapterFallback: '404.html', spa: true },
@@ -22,8 +24,8 @@ export default defineConfig({
 				name: 'Lectura',
 				short_name: 'Lectura',
 				description: 'Read Spanish EPUBs with tap-to-translate word and grammar help.',
-				start_url: '/',
-				scope: '/',
+				start_url: '/spanish-book/',
+				scope: '/spanish-book/',
 				display: 'standalone',
 				background_color: '#F6F5F1',
 				theme_color: '#0D6E6E',
